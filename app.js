@@ -171,8 +171,8 @@
     config.trial_rewards_per_performance ??= 1;
     config.trial_reward_choice_count ??= 3;
     config.reward_unlock_option_chance ??= 0.5;
-    config.reward_unlock_grant_chance ??= config.reward_unlock_option_chance;
-    config.reward_same_quality ??= false;
+    config.reward_unlock_grant_chance ??= 0;
+    config.reward_same_quality ??= true;
     config.rounding_mode ??= "round";
     config.reward_owned_option_chance ??= 0.75;
     config.reward_unlock_count ??= 2;
@@ -444,7 +444,7 @@
         options: validOptions.slice(0, state.config.trial_reward_choice_count),
         candidateIds: validOptions.filter((option) => option.type === "item").map((option) => option.itemId),
         quality: String(pending.quality || state.items.get(validOptions.find((option) => option.type === "item")?.itemId)?.quality || ""),
-        expansionGranted: Math.max(0, Number(pending.expansionGranted) || 0),
+        hasUnlockOption: validOptions.some((option) => option.type === "unlock"),
         selectedKey: validOptions.some((option) => option.key === pending.selectedKey) ? pending.selectedKey : null,
         performanceNumber: Number(pending.performanceNumber) || state.performances,
       } : null;
@@ -1006,7 +1006,6 @@
     state.totalScore += score;
     const rewardDue = state.mode === "trial" && state.performances % state.config.trial_performances_per_reward === 0;
     const rewardChoice = rewardDue ? createPendingRewardChoice(PerformanceSimulation.rngFromSeed(`${plan.seed}:reward`)) : null;
-    if (rewardChoice?.expansionGranted > 0) state.expansionTokens += rewardChoice.expansionGranted;
     state.pendingRewardChoice = rewardChoice;
     state.lastEventId = plan.event?.id || state.lastEventId;
     const detailText = [
@@ -1027,7 +1026,7 @@
       efficiency: stamina ? score / stamina : 0,
       itemCount: state.placed.length,
       unlockedCells: state.unlocked.size,
-      rewards: rewardChoice ? `待选择${rewardChoice.quality}色道具${rewardChoice.expansionGranted ? `；扩格+${rewardChoice.expansionGranted}` : ""}` : "",
+      rewards: rewardChoice ? `待选择${rewardChoice.quality}色奖励${rewardChoice.hasUnlockOption ? "（含扩格选项）" : ""}` : "",
       time: new Date().toLocaleString("zh-CN", { hour12: false }),
     });
     state.logs = state.logs.slice(0, state.config.max_log_entries);
@@ -1038,9 +1037,13 @@
   }
 
   function createPendingRewardChoice(rng = Math.random) {
-    const quality = weightedRandomQuality(rng);
+    const choiceCount = state.config.trial_reward_choice_count;
+    const canUnlock = state.unlocked.size < state.config.backpack_rows * state.config.backpack_cols;
+    const hasUnlockOption = canUnlock && choiceCount > 1 && rng() < state.config.reward_unlock_option_chance;
+    const itemChoiceCount = choiceCount - (hasUnlockOption ? 1 : 0);
+    const quality = weightedRandomQuality(rng, itemChoiceCount);
     const pool = [...state.items.values()].filter((item) => item.quality === quality.name);
-    const itemCount = Math.min(pool.length, state.config.trial_reward_choice_count);
+    const itemCount = Math.min(pool.length, itemChoiceCount);
     const candidateIds = [];
     const ownedPool = pool.filter((item) => state.discovered.has(item.id));
     if (ownedPool.length && rng() < state.config.reward_owned_option_chance) {
@@ -1055,12 +1058,15 @@
     }
     if (!candidateIds.length) return null;
     const options = candidateIds.map((itemId) => ({ type: "item", key: itemId, itemId }));
-    const expansionGranted = state.unlocked.size < state.config.backpack_rows * state.config.backpack_cols && rng() < state.config.reward_unlock_grant_chance ? state.config.reward_unlock_count : 0;
-    return options.length ? { options, candidateIds, quality: quality.name, expansionGranted, selectedKey: null, performanceNumber: state.performances } : null;
+    if (hasUnlockOption) {
+      const unlockOption = { type: "unlock", key: "unlock", unlockCount: state.config.reward_unlock_count };
+      options.splice(Math.floor(rng() * (options.length + 1)), 0, unlockOption);
+    }
+    return options.length ? { options, candidateIds, quality: quality.name, hasUnlockOption, selectedKey: null, performanceNumber: state.performances } : null;
   }
 
-  function weightedRandomQuality(rng = Math.random) {
-    const qualities = [...state.qualities.values()].filter((quality) => quality.rewardWeight > 0 && [...state.items.values()].filter((item) => item.quality === quality.name).length >= state.config.trial_reward_choice_count);
+  function weightedRandomQuality(rng = Math.random, requiredItemCount = state.config.trial_reward_choice_count) {
+    const qualities = [...state.qualities.values()].filter((quality) => quality.rewardWeight > 0 && [...state.items.values()].filter((item) => item.quality === quality.name).length >= requiredItemCount);
     const total = qualities.reduce((sum, quality) => sum + quality.rewardWeight, 0);
     let roll = rng() * total;
     for (const quality of qualities) {
@@ -1087,7 +1093,7 @@
     if (state.mode === "trial") {
       const remaining = state.config.trial_performances_per_reward - (state.performances % state.config.trial_performances_per_reward);
       els.performanceRewards.innerHTML = rewardChoice
-        ? `<p class="reward-complete">本场出现 ${rewardChoice.options.length} 件${rewardChoice.quality}色道具，选择 1 件${rewardChoice.expansionGranted ? `；同时获得 ${rewardChoice.expansionGranted} 次扩格机会` : ""}</p>`
+        ? `<p class="reward-complete">本场出现 ${rewardChoice.candidateIds.length} 件${rewardChoice.quality}色道具${rewardChoice.hasUnlockOption ? `和 1 个扩格选项` : ""}，选择 1 项</p>`
         : `<p class="reward-complete">再表演 ${remaining} 次进入奖励选择</p>`;
     } else {
       els.performanceRewards.innerHTML = '<p class="reward-complete">测试模式不改变道具库存</p>';
@@ -1106,7 +1112,7 @@
     if (!pending) return;
     els.rewardChoiceDialog.classList.toggle("collapsed", state.rewardCollapsed);
     els.rewardChoiceToggleButton.textContent = state.rewardCollapsed ? "展开选择" : "收起查看背包";
-    els.rewardChoiceSummary.textContent = `${pending.quality}色道具三选一${pending.expansionGranted ? ` · 已获得${pending.expansionGranted}次扩格机会` : ""}`;
+    els.rewardChoiceSummary.textContent = `${pending.quality}色同品质道具候选${pending.hasUnlockOption ? " · 含扩格选项" : " · 3件道具"}`;
     els.rewardChoiceList.innerHTML = pending.options.map((option) => {
       if (option.type === "unlock") {
         const selected = pending.selectedKey === option.key;
@@ -1198,7 +1204,6 @@
         rewardText = `${item.name}升级进度 ${nextProgress}/${state.config.upgrade_duplicates_per_level}`;
       }
     }
-    if (pending.expansionGranted > 0) rewardText += `；扩格机会+${pending.expansionGranted}`;
     const rewardLog = state.logs.find((log) => log.number === pending.performanceNumber);
     if (rewardLog) rewardLog.rewards = rewardText;
     state.pendingRewardChoice = null;
