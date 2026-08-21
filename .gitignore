@@ -1,0 +1,8 @@
+.playwright-cli/
+output/
+assets/*.png
+assets/item-icons/source/
+assets/item-icons/PROMPT.md
+scripts/
+start.ps1
+*.inspect.ndjson

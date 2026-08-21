@@ -1,0 +1,394 @@
+{
+  "version": "2026-08-20-v2-prototype",
+  "artDirection": "活动UE风格的手绘卡通道具；简化几何、清晰色块、古典舞台金色装饰；深蓝黑底。",
+  "cellUnit": 160,
+  "sourcePattern": "source/{ID}.png",
+  "outputPattern": "{ID}.webp",
+  "note": "V2体验期复用V1图标；新增ID暂用同种类占位图，名称与规则确认后逐件替换源图。",
+  "items": [
+    {
+      "id": "KB01",
+      "name": "音乐会三角钢琴",
+      "category": "键盘乐器",
+      "quality": "金",
+      "width": 2,
+      "height": 3
+    },
+    {
+      "id": "KB02",
+      "name": "双层羽管键琴",
+      "category": "键盘乐器",
+      "quality": "紫",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "KB03",
+      "name": "穆斯特尔钢片琴",
+      "category": "键盘乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "KB04",
+      "name": "音乐会簧风琴",
+      "category": "键盘乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "KB05",
+      "name": "维吉纳琴",
+      "category": "键盘乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "KB06",
+      "name": "手摇风琴",
+      "category": "键盘乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "KB07",
+      "name": "宫廷管风琴",
+      "category": "键盘乐器",
+      "quality": "红",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "id": "ST01",
+      "name": "埃拉尔音乐会竖琴",
+      "category": "弦乐器",
+      "quality": "红",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "id": "ST02",
+      "name": "音乐会大提琴",
+      "category": "弦乐器",
+      "quality": "金",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "ST03",
+      "name": "交响低音提琴",
+      "category": "弦乐器",
+      "quality": "金",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "ST04",
+      "name": "斯特拉迪瓦里小提琴",
+      "category": "弦乐器",
+      "quality": "金",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "ST05",
+      "name": "中提琴",
+      "category": "弦乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "ST06",
+      "name": "第二小提琴",
+      "category": "弦乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "ST07",
+      "name": "那不勒斯曼陀林",
+      "category": "弦乐器",
+      "quality": "紫",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "ST08",
+      "name": "古典吉他",
+      "category": "弦乐器",
+      "quality": "紫",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "ST09",
+      "name": "旅行小提琴",
+      "category": "弦乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "ST10",
+      "name": "小提琴弓",
+      "category": "弦乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "ST11",
+      "name": "低音提琴弓",
+      "category": "弦乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "ST12",
+      "name": "维也纳齐特琴",
+      "category": "弦乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "ST13",
+      "name": "文艺复兴鲁特琴",
+      "category": "弦乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "WI01",
+      "name": "法式圆号",
+      "category": "管乐器",
+      "quality": "红",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "WI02",
+      "name": "交响双簧管",
+      "category": "管乐器",
+      "quality": "金",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "WI03",
+      "name": "交响巴松管",
+      "category": "管乐器",
+      "quality": "金",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "WI04",
+      "name": "古典单簧管",
+      "category": "管乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "WI05",
+      "name": "银质长笛",
+      "category": "管乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "WI06",
+      "name": "皮斯顿小号",
+      "category": "管乐器",
+      "quality": "紫",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "WI07",
+      "name": "交响长号",
+      "category": "管乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "WI08",
+      "name": "低音大号",
+      "category": "管乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "WI09",
+      "name": "短笛",
+      "category": "管乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "WI10",
+      "name": "英国管",
+      "category": "管乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "WI11",
+      "name": "自然号",
+      "category": "管乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "PC01",
+      "name": "交响定音鼓",
+      "category": "打击乐器",
+      "quality": "红",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "PC02",
+      "name": "庆典军鼓",
+      "category": "打击乐器",
+      "quality": "金",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "PC03",
+      "name": "音乐会木琴",
+      "category": "打击乐器",
+      "quality": "金",
+      "width": 3,
+      "height": 1
+    },
+    {
+      "id": "PC04",
+      "name": "交响铜钹",
+      "category": "打击乐器",
+      "quality": "紫",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "PC05",
+      "name": "音乐会三角铁",
+      "category": "打击乐器",
+      "quality": "紫",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "PC06",
+      "name": "舞会铃鼓",
+      "category": "打击乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "PC07",
+      "name": "庆典大鼓",
+      "category": "打击乐器",
+      "quality": "蓝",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "PC08",
+      "name": "西班牙响板",
+      "category": "打击乐器",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "SG01",
+      "name": "镜框舞台门",
+      "category": "舞台装饰",
+      "quality": "红",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "id": "SG02",
+      "name": "水晶吊灯",
+      "category": "舞台装饰",
+      "quality": "金",
+      "width": 2,
+      "height": 2
+    },
+    {
+      "id": "SG03",
+      "name": "金色谱架",
+      "category": "舞台装饰",
+      "quality": "金",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "SG04",
+      "name": "舞台脚灯",
+      "category": "舞台装饰",
+      "quality": "紫",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "SG05",
+      "name": "指挥台",
+      "category": "舞台装饰",
+      "quality": "紫",
+      "width": 1,
+      "height": 2
+    },
+    {
+      "id": "SG06",
+      "name": "聚光灯",
+      "category": "舞台装饰",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "SG07",
+      "name": "边灯支架",
+      "category": "舞台装饰",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "SG08",
+      "name": "红丝绒幕布",
+      "category": "舞台装饰",
+      "quality": "蓝",
+      "width": 1,
+      "height": 3
+    },
+    {
+      "id": "SG09",
+      "name": "调音叉座",
+      "category": "舞台装饰",
+      "quality": "蓝",
+      "width": 1,
+      "height": 1
+    }
+  ]
+}

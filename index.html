@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>爱乐之城 · 表演道具验证器 V2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css?v=20260820-layout-v3">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-block">
+        <h1>爱乐之城 · 套装化表演道具验证器 V2</h1>
+        <p id="configStatus">正在读取本地配置表…</p>
+      </div>
+      <div class="mode-switch" aria-label="验证模式">
+        <button class="mode-button active" data-mode="trial">试玩模式</button>
+        <button class="mode-button" data-mode="test">测试模式</button>
+      </div>
+      <div class="header-actions">
+        <button class="button" id="openLogButton">表演日志</button>
+        <button class="button button-gold" id="openToolsButton">工具与配置</button>
+      </div>
+    </header>
+
+    <section class="metric-rail" aria-label="实时数据">
+      <div class="metric"><span>体力消耗</span><strong id="totalStamina">0</strong></div>
+      <div class="metric"><span>表演总分</span><strong id="totalScore">0</strong></div>
+      <div class="metric"><span>累计效率</span><strong id="totalEfficiency">0.0</strong></div>
+      <div class="metric"><span>已表演</span><strong><span id="performanceCount">0</span> 次</strong></div>
+      <div class="metric"><span>已解锁道具</span><strong><span id="discoveredCount">0</span>/<span id="itemPoolCount">0</span></strong></div>
+    </section>
+
+    <main class="workspace">
+      <section class="panel backpack-panel">
+        <div class="panel-header backpack-heading">
+          <div>
+            <h2>背包（<span id="gridSizeLabel">8×8</span>）</h2>
+            <p id="backpackSummary">中央区域已解锁 8 格</p>
+          </div>
+          <div class="backpack-tools">
+            <div class="backpack-score-summary" aria-label="背包表演值">
+              <span>背包表演值</span>
+              <strong id="previewScore">0</strong>
+              <small id="scoreBreakdownSummary">基础 0 · 套装 +0 · 能力 +0</small>
+            </div>
+            <div class="expand-status">
+              <span id="expandMessage">再表演 3 次进入奖励选择</span>
+              <div class="progress-track"><span id="expandProgress"></span></div>
+            </div>
+            <label class="unlock-direct">解锁至
+              <input id="unlockCountInput" type="number" min="8" max="64" value="8" inputmode="numeric">
+              格
+            </label>
+            <button class="button button-compact" id="applyUnlockCountButton">应用</button>
+          </div>
+        </div>
+
+        <div class="set-summary" id="setSummary" aria-label="当前套装">
+          <span class="set-empty">将共享套装的道具放入背包后显示套装层级。</span>
+        </div>
+
+        <div class="grid-stage-slot">
+          <div class="grid-stage" id="gridStage">
+            <div class="column-labels" id="columnLabels"></div>
+            <div class="row-labels" id="rowLabels"></div>
+            <div class="backpack-grid" id="backpackGrid" aria-label="表演道具背包"></div>
+          </div>
+        </div>
+
+        <div class="backpack-primary-actions">
+          <button class="button" id="unloadAllButton" title="快捷键 Backspace">一键卸下</button>
+          <label class="skip-performance-toggle" title="跳过表演过程，自动生成操作结果并直接显示结算">
+            <input id="skipPerformanceCheckbox" type="checkbox">
+            <span>跳过表现</span>
+          </label>
+          <button class="button button-primary backpack-perform-button" id="performButton">开始表演</button>
+        </div>
+
+        <div class="grid-legend">
+          <span><i class="legend-box locked"></i>锁定</span>
+          <span><i class="legend-box available"></i>可用格</span>
+          <span><i class="legend-box expand"></i>可扩充</span>
+          <span><i class="legend-box occupied"></i>道具占用</span>
+        </div>
+        <p class="backpack-hint" id="backpackHint">从仓库按住道具拖入背包，落点会实时显示完整占格。</p>
+      </section>
+
+      <section class="panel warehouse-panel" id="warehouseDropZone">
+        <div class="panel-header warehouse-heading">
+          <div>
+            <h2>道具仓库</h2>
+            <p><span id="warehouseCount">0</span> 件可用 · 仓库道具不计分</p>
+          </div>
+          <div class="warehouse-filters">
+            <input id="searchInput" type="search" placeholder="搜索名称或 ID">
+            <select id="qualityFilter" aria-label="品质筛选"><option value="">全部品质</option></select>
+            <select id="categoryFilter" aria-label="种类筛选"><option value="">全部种类</option></select>
+            <select id="setFilter" aria-label="套装筛选"><option value="">全部套装</option></select>
+          </div>
+        </div>
+
+        <div class="inventory-list" id="inventoryList"></div>
+        <div class="warehouse-footer">
+          <p id="warehouseHint">拖动道具到背包；单击查看详情。</p>
+          <div class="mini-actions">
+            <button class="button button-compact" id="undoButton">撤销</button>
+            <button class="button button-compact" id="redoButton">重做</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="detailDialog">
+    <div class="modal-card detail-modal-card">
+      <button class="modal-close" data-close-dialog="detailDialog" aria-label="关闭">×</button>
+      <div class="item-detail" id="itemDetail"></div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="logDialog">
+    <div class="modal-card log-modal-card">
+      <div class="modal-heading">
+        <div><h2>表演日志</h2><p>逐场记录得分、体力与当时配置效率</p></div>
+        <div class="modal-heading-actions"><button class="button button-compact" id="exportLogButton">导出 CSV</button><button class="modal-close inline" data-close-dialog="logDialog" aria-label="关闭">×</button></div>
+      </div>
+      <div class="log-table-wrap">
+        <table>
+          <thead><tr><th>场次</th><th>体力</th><th>基础</th><th>发挥</th><th>操作</th><th>事件</th><th>得分</th><th>效率</th><th>种子</th><th>新道具</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="toolsDialog">
+    <div class="modal-card tools-modal-card">
+      <button class="modal-close" data-close-dialog="toolsDialog" aria-label="关闭">×</button>
+      <h2>工具与配置</h2>
+        <p class="modal-lead">规则、套装和全部道具均由本地 V2 配置表读取；试玩和测试进度分别保存在本机。</p>
+      <div class="tool-section">
+        <h3>配置表</h3>
+        <label class="button button-gold" for="configFileInput">加载本地配置表</label>
+        <input id="configFileInput" type="file" accept=".xlsx,.xls" hidden>
+      </div>
+      <div class="tool-section">
+        <h3>当前模式进度</h3>
+        <button class="button danger" id="resetButton">重置当前模式</button>
+      </div>
+      <div class="tool-section simulation-tools">
+        <h3>可复现模拟</h3>
+        <p>模拟不消耗体力，也不改变仓库。输入同一种子可复现同一组结果。</p>
+        <div class="simulation-inputs">
+          <label>种子 <input id="simulationSeedInput" type="text" placeholder="留空使用本次试玩种子"></label>
+          <label>场次 <input id="simulationCountInput" type="number" min="1" max="1000" value="100"></label>
+          <button class="button button-gold" id="simulateButton">运行模拟</button>
+        </div>
+        <div class="simulation-presets" aria-label="模拟场次快捷选择">
+          <button class="button button-compact" data-sim-count="1">1场</button>
+          <button class="button button-compact" data-sim-count="100">100场</button>
+          <button class="button button-compact" data-sim-count="1000">1000场</button>
+        </div>
+        <div class="simulation-output" id="simulationOutput">摆入道具后可运行模拟。</div>
+      </div>
+      <div class="tool-section shortcut-list">
+        <h3>快捷操作</h3>
+        <p><kbd>拖动</kbd> 道具跟随鼠标，落点实时预览</p>
+        <p><kbd>Ctrl</kbd> + 点击：背包道具回仓库；仓库道具自动找空位</p>
+        <p><kbd>Backspace</kbd> 全部卸回仓库</p>
+        <p><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd> 撤销 / 重做摆放</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="performance-stage-dialog" id="performanceStageDialog">
+    <div class="performance-stage" data-outcome="steady">
+      <div class="stage-topbar">
+        <span class="stage-seed" id="stageSeed">种子 —</span>
+        <div class="stage-controls" aria-label="演出速度">
+          <button class="stage-control active" data-stage-speed="1">正常</button>
+          <button class="stage-control" data-stage-speed="2">2倍速</button>
+          <button class="stage-control" id="stageSkipButton">跳过</button>
+        </div>
+      </div>
+      <div class="stage-segment-rail" id="stageSegmentRail"></div>
+      <div class="theater-scene">
+        <div class="curtain curtain-left"></div><div class="curtain curtain-right"></div>
+        <div class="spotlight-beam"></div>
+        <div class="stage-copy">
+          <p class="stage-subtitle" id="stageSubtitle"></p>
+          <h2 id="stageTitle">演出即将开始</h2>
+          <strong class="stage-item" id="stageItem"></strong>
+          <p class="stage-outcome" id="stageOutcome"></p>
+        </div>
+        <div class="stage-event-card" id="stageEventCard" hidden>
+          <span>现场事件</span>
+          <strong id="stageEventName"></strong>
+          <p id="stageEventDescription"></p>
+          <button class="button button-primary" id="stageEventAction"></button>
+        </div>
+        <div class="stage-floor"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="rhythm-panel">
+        <div class="rhythm-track"><span class="rhythm-perfect-zone" id="stagePerfectZone"></span><i id="stageBeatMarker"></i></div>
+        <button class="rhythm-button" id="stageRhythmButton">在中央点击合拍</button>
+        <span class="beat-feedback" id="stageBeatFeedback">等待节拍进入中央亮区</span>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="performanceDialog">
+    <div class="modal-card performance-modal-card">
+      <button class="modal-close" data-close-dialog="performanceDialog" aria-label="关闭">×</button>
+      <p class="performance-kicker">本场表演完成</p>
+      <strong class="performance-score" id="performanceResultScore">0</strong>
+      <p class="performance-summary" id="performanceResultSummary"></p>
+      <div class="performance-breakdown" id="performanceResultBreakdown"></div>
+      <div class="reward-list" id="performanceRewards"></div>
+      <button class="button button-primary wide" data-close-dialog="performanceDialog">继续配置</button>
+    </div>
+  </dialog>
+
+  <dialog class="modal reward-choice-dialog" id="rewardChoiceDialog">
+    <div class="modal-card reward-choice-modal-card">
+      <p class="performance-kicker">表演奖励</p>
+      <h2>选择本次奖励</h2>
+      <p class="reward-choice-lead">先点击一个奖励查看选中状态，再点击确认。确认前不可退出此界面。</p>
+      <div class="reward-choice-list" id="rewardChoiceList" role="radiogroup" aria-label="奖励候选"></div>
+      <p class="reward-choice-hint" id="rewardChoiceHint">请选择 1 个奖励</p>
+      <button class="button button-primary wide" id="confirmRewardChoiceButton" disabled>确认获得</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/xlsx.full.min.js?v=20260820-set-v2"></script>
+  <script src="simulation.js?v=20260820-set-v2" defer></script>
+  <script src="performance-stage.js?v=20260820-set-v2" defer></script>
+  <script src="app.js?v=20260820-set-v2" defer></script>
+</body>
+</html>
