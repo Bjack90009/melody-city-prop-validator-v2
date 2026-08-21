@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const DEFAULT_WORKBOOK = "data/爱乐之城-表演道具验证配置-V2.1.xlsx?v=20260821-set-v21";
+  const DEFAULT_WORKBOOK = "data/爱乐之城-表演道具验证配置-V2.1.xlsx?v=20260821-reward-rules-fix";
   const STORAGE_PREFIX = "love-city-performance-prop-validator-set-v21";
   const ICON_ASSET_VERSION = "2026-08-14-cartoon-v1";
 
