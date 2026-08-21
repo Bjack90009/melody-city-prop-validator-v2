@@ -581,7 +581,7 @@ button { color: inherit; }
 }
 
 .item-icon-drag { position: absolute; inset: 0; z-index: 0; }
-.item-icon-drag img { object-fit: cover; }
+.item-icon-drag img { object-fit: contain; }
 .drag-ghost::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgb(2 9 14 / 0.68), transparent 55%, rgb(2 9 14 / 0.5)); }
 .drag-ghost.valid { border-color: var(--green); }
 .drag-ghost.swap { border-color: var(--orange); }
