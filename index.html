@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>爱乐之城 · 表演道具验证器 V2</title>
+  <title>爱乐之城 · 表演道具验证器 V2.1</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="styles.css?v=20260820-layout-v3">
 </head>
@@ -11,7 +11,7 @@
   <div class="app-shell">
     <header class="app-header">
       <div class="brand-block">
-        <h1>爱乐之城 · 套装化表演道具验证器 V2</h1>
+        <h1>爱乐之城 · 套装化表演道具验证器 V2.1</h1>
         <p id="configStatus">正在读取本地配置表…</p>
       </div>
       <div class="mode-switch" aria-label="验证模式">
@@ -139,7 +139,7 @@
     <div class="modal-card tools-modal-card">
       <button class="modal-close" data-close-dialog="toolsDialog" aria-label="关闭">×</button>
       <h2>工具与配置</h2>
-        <p class="modal-lead">规则、套装和全部道具均由本地 V2 配置表读取；试玩和测试进度分别保存在本机。</p>
+        <p class="modal-lead">规则、套装和全部道具均由本地 V2.1 配置表读取；试玩和测试进度分别保存在本机。</p>
       <div class="tool-section">
         <h3>配置表</h3>
         <label class="button button-gold" for="configFileInput">加载本地配置表</label>
@@ -224,20 +224,25 @@
 
   <dialog class="modal reward-choice-dialog" id="rewardChoiceDialog">
     <div class="modal-card reward-choice-modal-card">
-      <p class="performance-kicker">表演奖励</p>
-      <h2>选择本次奖励</h2>
-      <p class="reward-choice-lead">先点击一个奖励查看选中状态，再点击确认。确认前不可退出此界面。</p>
-      <div class="reward-choice-list" id="rewardChoiceList" role="radiogroup" aria-label="奖励候选"></div>
-      <p class="reward-choice-hint" id="rewardChoiceHint">请选择 1 个奖励</p>
-      <button class="button button-primary wide" id="confirmRewardChoiceButton" disabled>确认获得</button>
+      <div class="reward-choice-heading">
+        <div><p class="performance-kicker">表演奖励</p><h2>选择本次道具</h2></div>
+        <button type="button" class="button button-compact" id="rewardChoiceToggleButton">收起查看背包</button>
+      </div>
+      <p class="reward-choice-summary" id="rewardChoiceSummary"></p>
+      <div class="reward-choice-expanded">
+        <p class="reward-choice-lead">先点击一个道具，再点击确认。确认前可以收起窗口查看背包、仓库和道具详情，但不能调整配置或继续表演。</p>
+        <div class="reward-choice-list" id="rewardChoiceList" role="radiogroup" aria-label="奖励候选"></div>
+        <p class="reward-choice-hint" id="rewardChoiceHint">请选择 1 个道具</p>
+        <button class="button button-primary wide" id="confirmRewardChoiceButton" disabled>确认获得</button>
+      </div>
     </div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="vendor/xlsx.full.min.js?v=20260820-set-v2"></script>
-  <script src="simulation.js?v=20260820-set-v2" defer></script>
-  <script src="performance-stage.js?v=20260820-set-v2" defer></script>
-  <script src="app.js?v=20260820-set-v2" defer></script>
+  <script src="vendor/xlsx.full.min.js?v=20260821-set-v21"></script>
+  <script src="simulation.js?v=20260821-set-v21" defer></script>
+  <script src="performance-stage.js?v=20260821-set-v21" defer></script>
+  <script src="app.js?v=20260821-set-v21" defer></script>
 </body>
 </html>

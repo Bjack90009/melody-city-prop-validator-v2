@@ -388,7 +388,8 @@ button { color: inherit; }
 .placed-item-name { min-width: 0; width: fit-content; max-width: 100%; max-height: 2.45em; padding: 2px 3px; border-radius: 3px; grid-column: 1; grid-row: 1; z-index: 3; overflow: hidden; color: #fff; font-size: clamp(10px, 1.05vw, 13px); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; background: rgb(3 12 18 / 0.7); text-shadow: 0 1px 3px #000; }
 .placed-item-level { padding: 2px 3px; border-radius: 3px; grid-column: 1 / -1; grid-row: 2; align-self: end; justify-self: start; z-index: 3; color: #e5eef1; font-size: 9px; line-height: 1; background: rgb(3 12 18 / 0.68); }
 .score-mark { min-width: 23px; padding: 2px 4px; grid-column: 2; grid-row: 1; border-radius: 3px; z-index: 4; color: #fff3c2; text-align: center; font: 700 12px/1 Georgia, serif; background: rgb(4 14 20 / 0.82); box-shadow: 0 0 0 1px rgb(255 243 194 / 0.2); }
-.score-mark.effect-active { color: #70e6a8; background: rgb(5 45 31 / 0.82); box-shadow: 0 0 0 1px rgb(112 230 168 / 0.45), 0 0 10px rgb(64 189 140 / 0.28); }
+.placed-item-name.ability-active { color: #70e6a8; box-shadow: 0 0 0 1px rgb(112 230 168 / 0.35), 0 0 10px rgb(64 189 140 / 0.24); }
+.score-mark.score-boosted { color: #70e6a8; background: rgb(5 45 31 / 0.82); box-shadow: 0 0 0 1px rgb(112 230 168 / 0.45), 0 0 10px rgb(64 189 140 / 0.28); }
 .placed-h-1 { padding-block: 4px; }
 .placed-h-1 .placed-item-name { max-height: 2.2em; font-size: 10px; line-height: 1.08; }
 .placed-h-1 .placed-item-level { font-size: 8px; }
@@ -649,10 +650,16 @@ button { color: inherit; }
 .detail-shape-value { display: flex !important; align-items: center; gap: 12px; }
 .detail-shape-value em { color: var(--gold-soft); font-style: normal; font-size: 13px; }
 .level-row { margin: 13px 0; display: flex; justify-content: space-between; align-items: center; color: #d8e3e8; font-size: 12px; }
+.contribution-box { margin: 10px 0 13px; padding: 12px; border-left: 3px solid #70e6a8; text-align: left; background: #0b2430; }
+.contribution-box > span { color: var(--muted); font-size: 10px; }
+.contribution-box > strong { display: block; margin-top: 3px; color: #70e6a8; font: 700 24px/1.2 Georgia, serif; }
+.contribution-box p { margin: 7px 0 0; color: #dce8ec; font-size: 11px; line-height: 1.55; }
 .effect-box { margin-top: 13px; padding: 13px; border: 1px solid #315166; color: #e5eef1; font-size: 13px; line-height: 1.65; background: #081923; }
+.concept-term { padding: 0 2px; color: #72d8ff; font-weight: 700; background: rgb(50 164 210 / 0.12); }
 .effect-state { margin-top: 9px; color: var(--gold); font-size: 11px; }
 .detail-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .detail-actions .wide:only-child { grid-column: 1 / -1; }
+.detail-view-only { grid-column: 1 / -1; padding: 10px; color: var(--muted); text-align: center; font-size: 11px; background: #081923; }
 .detail-empty { padding: 32px; color: var(--muted); text-align: center; font-size: 12px; }
 
 .log-table-wrap { max-height: calc(100vh - 180px); border: 1px solid var(--line); overflow: auto; }
@@ -691,7 +698,25 @@ kbd { padding: 2px 6px; border: 1px solid #506b7a; border-bottom-width: 2px; bor
 .reward-item > div > span { color: var(--muted); font-size: 11px; }
 .reward-complete { padding: 15px; text-align: center; background: #0a1a25; }
 
-.reward-choice-modal-card { width: min(1080px, calc(100vw - 48px)); text-align: center; }
+.reward-choice-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  height: auto;
+  max-height: calc(100vh - 32px);
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  pointer-events: none;
+}
+.reward-choice-dialog[open] { display: block; }
+.reward-choice-dialog .modal-card { pointer-events: auto; }
+.reward-choice-dialog.collapsed { width: min(380px, calc(100vw - 24px)); inset: auto 12px 12px auto; transform: none; }
+.reward-choice-dialog.collapsed .reward-choice-expanded { display: none; }
+.reward-choice-dialog.collapsed .reward-choice-modal-card { padding: 14px; }
+.reward-choice-dialog.collapsed .reward-choice-heading h2 { font-size: 18px; }
+.reward-choice-modal-card { width: 100%; text-align: center; }
+.reward-choice-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; text-align: left; }
+.reward-choice-heading .performance-kicker { margin-bottom: 3px; }
+.reward-choice-summary { margin: 5px 0 13px; color: var(--gold-soft); text-align: left; font-size: 12px; }
 .reward-choice-modal-card h2 { margin: 4px 0 6px; color: var(--gold); font: 600 25px Georgia, "Songti SC", serif; }
 .reward-choice-lead { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
 .reward-choice-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; text-align: left; }
@@ -730,6 +755,7 @@ kbd { padding: 2px 6px; border: 1px solid #506b7a; border-bottom-width: 2px; bor
 .detail-set-tag.active { border-color: var(--gold); color: var(--gold-soft); background: rgb(211 169 78 / 0.1); }
 
 @media (max-width: 900px) {
+  .reward-choice-dialog { max-height: calc(100vh - 24px); }
   .reward-choice-modal-card { max-height: calc(100vh - 24px); }
   .reward-choice-list { grid-template-columns: 1fr; }
 }

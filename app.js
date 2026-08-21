@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const DEFAULT_WORKBOOK = "data/爱乐之城-表演道具验证配置-V2.xlsx?v=20260820-set-v2";
-  const STORAGE_PREFIX = "love-city-performance-prop-validator-set-v2";
+  const DEFAULT_WORKBOOK = "data/爱乐之城-表演道具验证配置-V2.1.xlsx?v=20260821-set-v21";
+  const STORAGE_PREFIX = "love-city-performance-prop-validator-set-v21";
   const ICON_ASSET_VERSION = "2026-08-14-cartoon-v1";
 
   const els = {};
@@ -40,6 +40,7 @@
     performanceRunning: false,
     performanceStage: null,
     pendingRewardChoice: null,
+    rewardCollapsed: false,
   };
 
   document.addEventListener("DOMContentLoaded", init);
@@ -53,7 +54,7 @@
       "warehouseHint", "searchInput", "qualityFilter", "categoryFilter", "setFilter", "inventoryList", "itemDetail", "exportLogButton", "setSummary", "scoreBreakdownSummary",
       "logBody", "unlockCountInput", "applyUnlockCountButton", "undoButton", "redoButton", "detailDialog", "logDialog",
       "toolsDialog", "performanceDialog", "performanceResultScore", "performanceResultSummary", "performanceResultBreakdown", "performanceRewards", "toast",
-      "rewardChoiceDialog", "rewardChoiceList", "rewardChoiceHint", "confirmRewardChoiceButton",
+      "rewardChoiceDialog", "rewardChoiceList", "rewardChoiceHint", "confirmRewardChoiceButton", "rewardChoiceToggleButton", "rewardChoiceSummary",
       "simulationSeedInput", "simulationCountInput", "simulateButton", "simulationOutput",
       "performanceStageDialog", "stageSeed", "stageSegmentRail", "stageTitle", "stageSubtitle", "stageItem", "stageOutcome",
       "stageEventCard", "stageEventName", "stageEventDescription", "stageEventAction", "stageRhythmButton", "stageBeatMarker", "stagePerfectZone",
@@ -78,6 +79,7 @@
     els.redoButton.addEventListener("click", redo);
     els.simulateButton.addEventListener("click", runSimulationBatch);
     els.confirmRewardChoiceButton.addEventListener("click", confirmRewardChoice);
+    els.rewardChoiceToggleButton.addEventListener("click", toggleRewardChoicePanel);
     for (const button of document.querySelectorAll("[data-sim-count]")) {
       button.addEventListener("click", () => { els.simulationCountInput.value = button.dataset.simCount; runSimulationBatch(); });
     }
@@ -169,6 +171,9 @@
     config.trial_rewards_per_performance ??= 1;
     config.trial_reward_choice_count ??= 3;
     config.reward_unlock_option_chance ??= 0.5;
+    config.reward_unlock_grant_chance ??= config.reward_unlock_option_chance;
+    config.reward_same_quality ??= false;
+    config.rounding_mode ??= "round";
     config.reward_owned_option_chance ??= 0.75;
     config.reward_unlock_count ??= 2;
     config.reward_highest_quality_unlock_count ??= 2;
@@ -244,7 +249,7 @@
         sets: [String(row["套装1"] || "").trim(), String(row["套装2"] || "").trim()].filter(Boolean),
         buildRole: String(row["Build职责"] || ""),
       };
-      if (!item.category || !item.styleTag) throw new Error(`${id} 的种类或风格标签为空`);
+      if (!item.category) throw new Error(`${id} 的种类为空`);
       if (!qualities.has(item.quality)) throw new Error(`${id} 使用了未定义品质：${item.quality}`);
       if (item.sets.length > 2 || item.sets.some((setId) => !sets.has(setId))) throw new Error(`${id} 使用了未定义套装或超过2个套装`);
       if (!Number.isInteger(item.width) || !Number.isInteger(item.height) || item.width < 1 || item.height < 1) throw new Error(`${id} 的宽高无效`);
@@ -276,7 +281,7 @@
     els.configStatus.textContent = `已加载：${sourceName} · 默认试玩模式 · ${config.backpack_rows}×${config.backpack_cols}背包`;
     setControlsEnabled(true);
     renderAll();
-    showToast(restored ? "V2试玩进度已恢复" : "V2试玩已开始：1紫1蓝共享套装并已可激活1级", "success");
+    showToast(restored ? "V2.1试玩进度已恢复" : "V2.1试玩已开始：1紫1蓝共享套装并已可激活1级", "success");
     if (state.pendingRewardChoice) setTimeout(showRewardChoice, 0);
   }
 
@@ -307,6 +312,7 @@
     if (config.initial_rows > config.backpack_rows || config.initial_cols > config.backpack_cols) throw new Error("初始可用区域不能超过背包尺寸");
     if (config.max_item_level > 5) throw new Error("当前道具数据只提供到Lv.5");
     if (!Number.isFinite(Number(config.reward_unlock_option_chance)) || Number(config.reward_unlock_option_chance) < 0 || Number(config.reward_unlock_option_chance) > 1) throw new Error("规则 reward_unlock_option_chance 必须为0—1之间的小数");
+    if (!Number.isFinite(Number(config.reward_unlock_grant_chance)) || Number(config.reward_unlock_grant_chance) < 0 || Number(config.reward_unlock_grant_chance) > 1) throw new Error("规则 reward_unlock_grant_chance 必须为0—1之间的小数");
     if (!Number.isFinite(Number(config.reward_owned_option_chance)) || Number(config.reward_owned_option_chance) < 0 || Number(config.reward_owned_option_chance) > 1) throw new Error("规则 reward_owned_option_chance 必须为0—1之间的小数");
   }
 
@@ -437,6 +443,8 @@
       state.pendingRewardChoice = validOptions.length ? {
         options: validOptions.slice(0, state.config.trial_reward_choice_count),
         candidateIds: validOptions.filter((option) => option.type === "item").map((option) => option.itemId),
+        quality: String(pending.quality || state.items.get(validOptions.find((option) => option.type === "item")?.itemId)?.quality || ""),
+        expansionGranted: Math.max(0, Number(pending.expansionGranted) || 0),
         selectedKey: validOptions.some((option) => option.key === pending.selectedKey) ? pending.selectedKey : null,
         performanceNumber: Number(pending.performanceNumber) || state.performances,
       } : null;
@@ -450,6 +458,7 @@
   }
 
   function switchMode(mode) {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.config || mode === state.mode || !["trial", "test"].includes(mode)) return;
     persistState();
     closeAllDialogs();
@@ -459,6 +468,7 @@
   }
 
   function resetProgress() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.config) return;
     const modeName = state.mode === "trial" ? "试玩" : "测试";
     if (!window.confirm(`确定重置${modeName}模式的背包、仓库、解锁进度和全部日志吗？`)) return;
@@ -490,9 +500,19 @@
   }
 
   function renderMode() {
+    const locked = rewardDecisionLocked();
+    document.body.classList.toggle("reward-decision-locked", locked);
     document.querySelectorAll("[data-mode]").forEach((button) => button.classList.toggle("active", button.dataset.mode === state.mode));
-    els.undoButton.disabled = !state.history.length;
-    els.redoButton.disabled = !state.future.length;
+    document.querySelectorAll("[data-mode]").forEach((button) => { button.disabled = locked; });
+    els.performButton.disabled = locked || state.performanceRunning;
+    els.unloadAllButton.disabled = locked || state.performanceRunning;
+    els.skipPerformanceCheckbox.disabled = locked || state.performanceRunning;
+    els.resetButton.disabled = locked || state.performanceRunning;
+    els.applyUnlockCountButton.disabled = locked || state.performanceRunning;
+    els.unlockCountInput.disabled = locked || state.performanceRunning;
+    els.simulateButton.disabled = locked || state.performanceRunning;
+    els.undoButton.disabled = locked || !state.history.length;
+    els.redoButton.disabled = locked || !state.future.length;
     els.warehouseHint.textContent = state.mode === "trial"
       ? `拖入背包完成配置；每 ${state.config.trial_performances_per_reward} 次表演进入一次三选一奖励。`
       : "拖入背包验证套装与能力；测试模式可直接调整等级和解锁格数。";
@@ -573,6 +593,7 @@
       const block = document.createElement("div");
       const itemBreakdown = state.preview.breakdown.get(placed.instanceId);
       const effectActive = Boolean(itemBreakdown?.active);
+      const boosted = Boolean((itemBreakdown?.setFixed || 0) + (itemBreakdown?.specialFixed || 0) > 0 || (itemBreakdown?.receivedPercent || 0) > 0);
       block.className = `placed-item placed-w-${item.width} placed-h-${item.height}`;
       block.style.setProperty("--quality-color", quality.color);
       block.style.left = `calc(${(placed.col / cols) * 100}% + ${gap + 1}px)`;
@@ -580,7 +601,7 @@
       block.style.width = `calc(${(item.width / cols) * 100}% - ${gap + 2}px)`;
       block.style.height = `calc(${(item.height / rows) * 100}% - ${gap + 2}px)`;
       block.dataset.instanceId = placed.instanceId;
-      block.innerHTML = `${itemIcon(item, "placed")}<strong class="placed-item-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><span class="score-mark${effectActive ? " effect-active" : ""}" aria-label="表演值 ${formatNumber(itemBreakdown?.total || 0)}，能力${effectActive ? "已激活" : "未激活"}">${formatNumber(itemBreakdown?.total || 0)}</span><small class="placed-item-level">Lv.${placed.level}</small>`;
+      block.innerHTML = `${itemIcon(item, "placed")}<strong class="placed-item-name${effectActive ? " ability-active" : ""}" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><span class="score-mark${boosted ? " score-boosted" : ""}" aria-label="表演值 ${formatNumber(itemBreakdown?.total || 0)}，能力${effectActive ? "已激活" : "未激活"}">${formatNumber(itemBreakdown?.total || 0)}</span><small class="placed-item-level">Lv.${placed.level}</small>`;
       block.addEventListener("pointerdown", (event) => beginPointerGesture(event, "backpack", placed.instanceId, block));
       els.backpackGrid.appendChild(block);
     }
@@ -590,6 +611,7 @@
   }
 
   function expandCell(row, col) {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     const key = cellKey(row, col);
     if (!state.expansionTokens || !expandableCells().has(key)) return;
     pushHistory();
@@ -613,6 +635,7 @@
   }
 
   function applyManualUnlockCount() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     const min = state.config.initial_rows * state.config.initial_cols;
     const max = state.config.backpack_rows * state.config.backpack_cols;
     const target = clamp(Math.round(Number(els.unlockCountInput.value)), min, max);
@@ -687,6 +710,15 @@
   }
 
   function beginPointerGesture(event, source, instanceId, sourceElement) {
+    if (rewardDecisionLocked()) {
+      if (event.button !== 0) return;
+      const isInventory = source === "warehouse";
+      state.selectedInventoryId = isInventory ? instanceId : null;
+      state.selectedPlacedId = isInventory ? null : instanceId;
+      renderDetail();
+      openDialog(els.detailDialog);
+      return;
+    }
     if (event.button !== 0 || state.drag) return;
     if (event.ctrlKey) {
       event.preventDefault();
@@ -863,7 +895,7 @@
     }
     const item = state.items.get(instance.itemId);
     const quality = state.qualities.get(item.quality);
-    const breakdown = state.preview.breakdown.get(instance.instanceId) || { base: item.base[instance.level - 1], setFixed: 0, specialFixed: 0, receivedPercent: 0, total: item.base[instance.level - 1], active: false, matches: 0, activeSets: [] };
+    const breakdown = state.preview.breakdown.get(instance.instanceId) || { base: item.base[instance.level - 1], setFixed: 0, specialFixed: 0, receivedPercent: 0, total: item.base[instance.level - 1], active: false, matches: 0, activeSets: [], setSources: [], abilitySources: [] };
     const setLabels = item.sets.map((setId) => {
       const set = state.sets.get(setId);
       const current = state.preview.sets?.get(setId);
@@ -873,23 +905,23 @@
     els.itemDetail.innerHTML = `
       <div class="detail-hero">
         ${itemIcon(item, "detail")}
-        <div><h2 class="detail-title">${escapeHtml(item.name)}</h2><p class="detail-id">${item.id} · ${item.quality} · ${escapeHtml(item.category)} / ${escapeHtml(item.styleTag)}</p></div>
+        <div><h2 class="detail-title">${escapeHtml(item.name)}</h2><p class="detail-id">${item.id} · ${item.quality} · ${escapeHtml(item.category)}</p></div>
       </div>
       <div class="detail-facts">
-        <div class="detail-fact"><span>种类 / 风格</span><strong>${escapeHtml(item.category)} / ${escapeHtml(item.styleTag)}</strong></div>
+        <div class="detail-fact"><span>种类</span><strong>${highlightConcepts(item.category)}</strong></div>
         <div class="detail-fact"><span>固定形状</span><strong class="detail-shape-value">${shapePreview(item, "detail")}<em>${item.area} 格</em></strong></div>
         <div class="detail-fact"><span>套装</span><strong class="detail-set-list">${setLabels}</strong></div>
         <div class="detail-fact"><span>放置与升级</span><strong>${escapeHtml(item.limitText)}</strong></div>
-        <div class="detail-fact"><span>当前贡献</span><strong>${formatNumber(breakdown.total)}</strong></div>
       </div>
-      ${state.mode === "test" ? `<div class="level-row"><span>测试等级</span><select id="detailLevelSelect">${[1, 2, 3, 4, 5].map((level) => `<option value="${level}"${level === instance.level ? " selected" : ""}>Lv.${level}</option>`).join("")}</select></div>` : `<div class="level-row"><span>当前等级</span><strong>Lv.${instance.level}</strong></div>`}
+      ${state.mode === "test" && !rewardDecisionLocked() ? `<div class="level-row"><span>测试等级</span><select id="detailLevelSelect">${[1, 2, 3, 4, 5].map((level) => `<option value="${level}"${level === instance.level ? " selected" : ""}>Lv.${level}</option>`).join("")}</select></div>` : `<div class="level-row"><span>当前等级</span><strong>Lv.${instance.level}</strong></div>`}
+      <div class="contribution-box"><span>当前贡献</span><strong>${formatNumber(breakdown.total)}</strong><p>${contributionFormula(breakdown)}</p></div>
       <div class="detail-facts">
         <div class="detail-fact"><span>基础表演值</span><strong>${formatNumber(item.base[instance.level - 1])}</strong></div>
         <div class="detail-fact"><span>能力值</span><strong>${formatEffectValue(item, instance.level)}</strong></div>
       </div>
-      <div class="effect-box">${escapeHtml(item.effectDescription)}<div class="effect-state">${placedInstance ? effectStatusText(breakdown) : "放入背包后显示实时触发结果"}</div></div>
+      <div class="effect-box">${highlightConcepts(abilityText(item, instance.level))}<div class="effect-state">${placedInstance ? effectStatusText(breakdown) : "放入背包后显示实时触发结果"}</div></div>
       <div class="detail-actions">
-        ${inventoryInstance ? '<button class="button button-gold wide" id="autoPlaceButton">自动寻找空位</button>' : '<button class="button button-gold wide" id="returnButton">卸回仓库</button>'}
+        ${rewardDecisionLocked() ? '<span class="detail-view-only">奖励选择期间仅可查看</span>' : inventoryInstance ? '<button class="button button-gold wide" id="autoPlaceButton">自动寻找空位</button>' : '<button class="button button-gold wide" id="returnButton">卸回仓库</button>'}
       </div>`;
 
     document.getElementById("detailLevelSelect")?.addEventListener("change", (event) => {
@@ -920,6 +952,7 @@
   }
 
   async function perform() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.config || state.performanceRunning) return;
     if (!state.placed.length || state.preview.total <= 0) return showToast("请先把至少一件道具放入背包", "error");
     if (!window.PerformanceSimulation || !state.performanceStage) return showToast("表演模拟组件尚未加载", "error");
@@ -973,6 +1006,7 @@
     state.totalScore += score;
     const rewardDue = state.mode === "trial" && state.performances % state.config.trial_performances_per_reward === 0;
     const rewardChoice = rewardDue ? createPendingRewardChoice(PerformanceSimulation.rngFromSeed(`${plan.seed}:reward`)) : null;
+    if (rewardChoice?.expansionGranted > 0) state.expansionTokens += rewardChoice.expansionGranted;
     state.pendingRewardChoice = rewardChoice;
     state.lastEventId = plan.event?.id || state.lastEventId;
     const detailText = [
@@ -993,7 +1027,7 @@
       efficiency: stamina ? score / stamina : 0,
       itemCount: state.placed.length,
       unlockedCells: state.unlocked.size,
-      rewards: rewardChoice ? "待选择" : "",
+      rewards: rewardChoice ? `待选择${rewardChoice.quality}色道具${rewardChoice.expansionGranted ? `；扩格+${rewardChoice.expansionGranted}` : ""}` : "",
       time: new Date().toLocaleString("zh-CN", { hour12: false }),
     });
     state.logs = state.logs.slice(0, state.config.max_log_entries);
@@ -1004,47 +1038,39 @@
   }
 
   function createPendingRewardChoice(rng = Math.random) {
-    const pool = [...state.items.values()];
-    const itemCount = Math.min(pool.length, state.config.trial_reward_choice_count - 1);
+    const quality = weightedRandomQuality(rng);
+    const pool = [...state.items.values()].filter((item) => item.quality === quality.name);
+    const itemCount = Math.min(pool.length, state.config.trial_reward_choice_count);
     const candidateIds = [];
     const ownedPool = pool.filter((item) => state.discovered.has(item.id));
     if (ownedPool.length && rng() < state.config.reward_owned_option_chance) {
-      const item = weightedRandomItem(ownedPool, rng);
+      const item = uniformRandomItem(ownedPool, rng);
       candidateIds.push(item.id);
       pool.splice(pool.findIndex((candidate) => candidate.id === item.id), 1);
     }
     while (pool.length && candidateIds.length < itemCount) {
-      const item = weightedRandomItem(pool, rng);
+      const item = uniformRandomItem(pool, rng);
       candidateIds.push(item.id);
       pool.splice(pool.findIndex((candidate) => candidate.id === item.id), 1);
     }
     if (!candidateIds.length) return null;
-    const highestOrder = Math.max(...candidateIds.map((itemId) => state.qualities.get(state.items.get(itemId).quality).order), 0);
-    const globalHighestOrder = Math.max(...[...state.qualities.values()].map((quality) => quality.order));
-    const unlockCount = highestOrder === globalHighestOrder ? state.config.reward_highest_quality_unlock_count : state.config.reward_unlock_count;
-    const canOfferUnlock = state.unlocked.size < state.config.backpack_rows * state.config.backpack_cols && rng() < state.config.reward_unlock_option_chance;
-    const options = [
-      ...(canOfferUnlock ? [{ type: "unlock", key: "__unlock__", unlockCount }] : []),
-      ...candidateIds.map((itemId) => ({ type: "item", key: itemId, itemId })),
-    ];
-    while (pool.length && options.length < state.config.trial_reward_choice_count) {
-      const item = weightedRandomItem(pool, rng);
-      options.push({ type: "item", key: item.id, itemId: item.id });
-      candidateIds.push(item.id);
-      pool.splice(pool.findIndex((candidate) => candidate.id === item.id), 1);
-    }
-    return options.length ? { options, candidateIds, selectedKey: null, performanceNumber: state.performances } : null;
+    const options = candidateIds.map((itemId) => ({ type: "item", key: itemId, itemId }));
+    const expansionGranted = state.unlocked.size < state.config.backpack_rows * state.config.backpack_cols && rng() < state.config.reward_unlock_grant_chance ? state.config.reward_unlock_count : 0;
+    return options.length ? { options, candidateIds, quality: quality.name, expansionGranted, selectedKey: null, performanceNumber: state.performances } : null;
   }
 
-  function weightedRandomItem(items, rng = Math.random) {
-    const total = items.reduce((sum, item) => sum + state.qualities.get(item.quality).rewardWeight, 0);
+  function weightedRandomQuality(rng = Math.random) {
+    const qualities = [...state.qualities.values()].filter((quality) => quality.rewardWeight > 0 && [...state.items.values()].filter((item) => item.quality === quality.name).length >= state.config.trial_reward_choice_count);
+    const total = qualities.reduce((sum, quality) => sum + quality.rewardWeight, 0);
     let roll = rng() * total;
-    for (const item of items) {
-      roll -= state.qualities.get(item.quality).rewardWeight;
-      if (roll <= 0) return item;
+    for (const quality of qualities) {
+      roll -= quality.rewardWeight;
+      if (roll <= 0) return quality;
     }
-    return items.at(-1);
+    return qualities.at(-1);
   }
+
+  function uniformRandomItem(items, rng = Math.random) { return items[Math.floor(rng() * items.length)]; }
 
   function showPerformanceResult(plan, result, stamina, rewardChoice) {
     els.performanceResultScore.textContent = `${formatNumber(result.score)} 分`;
@@ -1061,7 +1087,7 @@
     if (state.mode === "trial") {
       const remaining = state.config.trial_performances_per_reward - (state.performances % state.config.trial_performances_per_reward);
       els.performanceRewards.innerHTML = rewardChoice
-        ? `<p class="reward-complete">本场可从 ${rewardChoice.options.length} 个奖励中选择 1 个</p>`
+        ? `<p class="reward-complete">本场出现 ${rewardChoice.options.length} 件${rewardChoice.quality}色道具，选择 1 件${rewardChoice.expansionGranted ? `；同时获得 ${rewardChoice.expansionGranted} 次扩格机会` : ""}</p>`
         : `<p class="reward-complete">再表演 ${remaining} 次进入奖励选择</p>`;
     } else {
       els.performanceRewards.innerHTML = '<p class="reward-complete">测试模式不改变道具库存</p>';
@@ -1072,12 +1098,15 @@
   function showRewardChoice() {
     if (!state.pendingRewardChoice || els.performanceDialog.open) return;
     renderRewardChoice();
-    openDialog(els.rewardChoiceDialog);
+    if (!els.rewardChoiceDialog.open) els.rewardChoiceDialog.show();
   }
 
   function renderRewardChoice() {
     const pending = state.pendingRewardChoice;
     if (!pending) return;
+    els.rewardChoiceDialog.classList.toggle("collapsed", state.rewardCollapsed);
+    els.rewardChoiceToggleButton.textContent = state.rewardCollapsed ? "展开选择" : "收起查看背包";
+    els.rewardChoiceSummary.textContent = `${pending.quality}色道具三选一${pending.expansionGranted ? ` · 已获得${pending.expansionGranted}次扩格机会` : ""}`;
     els.rewardChoiceList.innerHTML = pending.options.map((option) => {
       if (option.type === "unlock") {
         const selected = pending.selectedKey === option.key;
@@ -1093,14 +1122,14 @@
       const owned = ownedInstanceForItem(item.id);
       const progress = Number(state.upgradeProgress[item.id] || 0);
       const ownership = !owned ? "尚未持有" : owned.level >= state.config.max_item_level ? `已达 Lv.${owned.level} · 再次获得转化为巡演纪念票` : `已持有 Lv.${owned.level} · 升级进度 ${progress}/${state.config.upgrade_duplicates_per_level}`;
-      const memberships = item.sets.map((setId) => state.sets.get(setId)?.name).filter(Boolean).join(" / ") || "无套装";
+      const memberships = item.sets.map((setId) => `${state.sets.get(setId)?.name || setId} · 已拥有${ownedSetMemberCount(setId)}件`).join(" / ") || "无套装";
       return `<button type="button" class="reward-choice-card${selected ? " selected" : ""}" data-reward-key="${item.id}" role="radio" aria-checked="${selected}" style="--quality-color:${quality.color}">
-        <span class="reward-choice-card-head">${itemIcon(item, "reward")}<span class="reward-choice-card-title"><strong>${escapeHtml(item.name)}</strong><span>${item.id} · ${item.quality} · ${escapeHtml(item.category)} / ${escapeHtml(item.styleTag)}</span></span></span>
+        <span class="reward-choice-card-head">${itemIcon(item, "reward")}<span class="reward-choice-card-title"><strong>${escapeHtml(item.name)}</strong><span>${item.id} · ${item.quality} · ${escapeHtml(item.category)}</span></span></span>
         <span class="reward-choice-levels"><span>持有状态</span><strong>${escapeHtml(ownership)}</strong></span>
         <span class="reward-choice-card-facts"><span><span>套装</span><strong>${escapeHtml(memberships)}</strong></span><span><span>占格与限制</span><span class="reward-choice-occupancy"><strong>${item.width}×${item.height} · ${item.area}格<br>重复获得自动升级</strong>${shapePreview(item, "compact")}</span></span></span>
         <span class="reward-choice-levels"><span>基础表演值 Lv.1—Lv.5</span><strong>${item.base.map(formatNumber).join(" / ")}</strong></span>
         <span class="reward-choice-levels"><span>能力值 Lv.1—Lv.5</span><strong>${item.effect.map((_, index) => formatEffectValue(item, index + 1)).join(" / ")}</strong></span>
-        <span class="reward-choice-effect">${escapeHtml(item.effectDescription)}</span>
+        <span class="reward-choice-effect">${highlightConcepts(abilityText(item, 1))}</span>
       </button>`;
     }).join("");
     for (const card of els.rewardChoiceList.querySelectorAll("[data-reward-key]")) {
@@ -1116,6 +1145,16 @@
     els.confirmRewardChoiceButton.disabled = !selectedOption;
   }
 
+  function toggleRewardChoicePanel() {
+    if (!state.pendingRewardChoice) return;
+    state.rewardCollapsed = !state.rewardCollapsed;
+    renderRewardChoice();
+  }
+
+  function ownedSetMemberCount(setId) {
+    return [...state.discovered].filter((itemId) => state.items.get(itemId)?.sets.includes(setId)).length;
+  }
+
   function confirmRewardChoice() {
     const pending = state.pendingRewardChoice;
     const selectedOption = pending?.options.find((option) => option.key === pending.selectedKey);
@@ -1125,6 +1164,7 @@
       const rewardLog = state.logs.find((log) => log.number === pending.performanceNumber);
       if (rewardLog) rewardLog.rewards = `解锁${selectedOption.unlockCount}格`;
       state.pendingRewardChoice = null;
+      state.rewardCollapsed = false;
       els.rewardChoiceDialog.close();
       renderAll();
       showToast(`已获得 ${selectedOption.unlockCount} 次扩格机会，请点击金色虚线格`, "success", 5000);
@@ -1158,9 +1198,11 @@
         rewardText = `${item.name}升级进度 ${nextProgress}/${state.config.upgrade_duplicates_per_level}`;
       }
     }
+    if (pending.expansionGranted > 0) rewardText += `；扩格机会+${pending.expansionGranted}`;
     const rewardLog = state.logs.find((log) => log.number === pending.performanceNumber);
     if (rewardLog) rewardLog.rewards = rewardText;
     state.pendingRewardChoice = null;
+    state.rewardCollapsed = false;
     els.rewardChoiceDialog.close();
     renderAll();
     showToast(!owned ? (spot ? `已获得 ${item.name}，并放入背包` : `已获得 ${item.name}；当前无完整空位，已放入仓库`) : rewardText, "success", 5000);
@@ -1203,6 +1245,7 @@
   }
 
   function unloadAll() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.placed.length) return showToast("背包当前没有道具");
     pushHistory();
     state.inventory.push(...state.placed.map(({ instanceId, itemId, level }) => ({ instanceId, itemId, level })));
@@ -1213,6 +1256,7 @@
   }
 
   function placeFromWarehouse(instanceId, row, col, allowSwap = true, recordHistory = true) {
+    if (rewardDecisionLocked()) return showToast("选择奖励期间不能调整背包", "error");
     const validation = validatePlacement(instanceId, row, col, { allowSwap });
     if (!validation.ok) return showToast(validation.message, "error");
     if (recordHistory) pushHistory();
@@ -1250,6 +1294,7 @@
   }
 
   function returnToWarehouse(instanceId, recordHistory = true) {
+    if (rewardDecisionLocked()) return showToast("选择奖励期间不能调整背包", "error");
     const index = state.placed.findIndex((entry) => entry.instanceId === instanceId);
     if (index < 0) return;
     if (recordHistory) pushHistory();
@@ -1293,7 +1338,7 @@
     for (const placed of state.placed) {
       const item = state.items.get(placed.itemId);
       const base = item.base[placed.level - 1];
-      breakdown.set(placed.instanceId, { base, setFixed: 0, specialFixed: 0, receivedPercent: 0, total: base, active: false, matches: 0, activeSets: [] });
+      breakdown.set(placed.instanceId, { base, setFixed: 0, specialFixed: 0, receivedPercent: 0, total: base, active: false, matches: 0, activeSets: [], setSources: [], abilitySources: [] });
     }
 
     const setStates = new Map();
@@ -1308,17 +1353,30 @@
         const info = breakdown.get(member.instanceId);
         info.setFixed += Number(tier.fixed || 0);
         info.activeSets.push(set.id);
+        info.setSources.push({ name: `${set.name} ${tierIndex + 1}级`, value: Number(tier.fixed || 0) });
       }
       const special = tier.special;
       if (!special) continue;
       if (special.type === "adjacentMemberBonus") {
         for (const member of members) {
-          if (members.some((other) => other.instanceId !== member.instanceId && areAdjacent(placementRect(member), placementRect(other)))) breakdown.get(member.instanceId).specialFixed += Number(special.value || 0);
+          if (members.some((other) => other.instanceId !== member.instanceId && areAdjacent(placementRect(member), placementRect(other)))) {
+            const targetInfo = breakdown.get(member.instanceId);
+            targetInfo.specialFixed += Number(special.value || 0);
+            targetInfo.setSources.push({ name: `${set.name} ${tierIndex + 1}级特殊效果`, value: Number(special.value || 0) });
+          }
         }
       } else if (special.type === "allInstrumentBonus") {
-        for (const target of state.placed) if (instrumentCategories().includes(state.items.get(target.itemId).category)) breakdown.get(target.instanceId).specialFixed += Number(special.value || 0);
+        for (const target of state.placed) if (instrumentCategories().includes(state.items.get(target.itemId).category)) {
+          const targetInfo = breakdown.get(target.instanceId);
+          targetInfo.specialFixed += Number(special.value || 0);
+          targetInfo.setSources.push({ name: `${set.name} ${tierIndex + 1}级特殊效果`, value: Number(special.value || 0) });
+        }
       } else if (special.type === "categoryBonus") {
-        for (const target of state.placed) if (state.items.get(target.itemId).category === special.category) breakdown.get(target.instanceId).specialFixed += Number(special.value || 0);
+        for (const target of state.placed) if (state.items.get(target.itemId).category === special.category) {
+          const targetInfo = breakdown.get(target.instanceId);
+          targetInfo.specialFixed += Number(special.value || 0);
+          targetInfo.setSources.push({ name: `${set.name} ${tierIndex + 1}级特殊效果`, value: Number(special.value || 0) });
+        }
       }
     }
 
@@ -1331,7 +1389,11 @@
         const recipients = targetsForRule(source, rule).slice(0, rule.cap ?? Infinity);
         info.matches = recipients.length;
         info.active = recipients.length > 0;
-        for (const recipient of recipients) breakdown.get(recipient.instanceId).receivedPercent += value;
+        for (const recipient of recipients) {
+          const recipientInfo = breakdown.get(recipient.instanceId);
+          recipientInfo.receivedPercent += value;
+          recipientInfo.abilitySources.push({ name: item.name, value });
+        }
       }
     }
     let total = 0;
@@ -1340,13 +1402,13 @@
     let abilityTotal = 0;
     for (const info of breakdown.values()) {
       const fixedValue = info.base + info.setFixed + info.specialFixed;
-      info.total = Math.round(fixedValue * (1 + info.receivedPercent / 100));
+      info.total = state.config.rounding_mode === "floor" ? Math.floor(fixedValue * (1 + info.receivedPercent / 100)) : Math.round(fixedValue * (1 + info.receivedPercent / 100));
       baseTotal += info.base;
       setTotal += info.setFixed + info.specialFixed;
       abilityTotal += info.total - fixedValue;
       total += info.total;
     }
-    return { total: Math.round(total), baseTotal, setTotal, abilityTotal, breakdown, sets: setStates };
+    return { total, baseTotal, setTotal, abilityTotal, breakdown, sets: setStates };
   }
 
   function instrumentCategories() { return ["键盘乐器", "弦乐器", "管乐器", "打击乐器"]; }
@@ -1400,6 +1462,7 @@
   }
 
   function undo() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.history.length) return;
     state.future.push(layoutSnapshot());
     applyLayoutSnapshot(state.history.pop());
@@ -1408,6 +1471,7 @@
   }
 
   function redo() {
+    if (rewardDecisionLocked()) return showToast("请先完成本次道具选择", "error");
     if (!state.future.length) return;
     state.history.push(layoutSnapshot());
     applyLayoutSnapshot(state.future.pop());
@@ -1464,7 +1528,12 @@
   function randomItem(items) { return items.length ? items[Math.floor(Math.random() * items.length)] : null; }
   function csvCell(value) { return `"${String(value).replaceAll('"', '""')}"`; }
   function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-  function setControlsEnabled(enabled) { for (const control of [els.performButton, els.unloadAllButton, els.skipPerformanceCheckbox, els.resetButton, els.exportLogButton, els.applyUnlockCountButton, els.simulateButton]) control.disabled = !enabled; }
+  function setControlsEnabled(enabled) {
+    const locked = rewardDecisionLocked();
+    for (const control of [els.performButton, els.unloadAllButton, els.skipPerformanceCheckbox, els.resetButton, els.applyUnlockCountButton, els.simulateButton]) control.disabled = !enabled || locked;
+    els.exportLogButton.disabled = !enabled;
+  }
+  function rewardDecisionLocked() { return Boolean(state.pendingRewardChoice); }
   function showToast(message, type = "", duration = 3200) { clearTimeout(state.toastTimer); els.toast.textContent = message; els.toast.className = `toast show ${type}`; state.toastTimer = setTimeout(() => { els.toast.className = "toast"; }, duration); }
   function cellKey(row, col) { return `${row},${col}`; }
   function cellKeySort(a, b) { const [ar, ac] = a.split(",").map(Number); const [br, bc] = b.split(",").map(Number); return ar - br || ac - bc; }
@@ -1472,6 +1541,30 @@
   function formatNumber(value) { return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 }).format(value || 0); }
   function formatEffectValue(item, level) { return `${formatNumber(item.effect[level - 1])}${item.effectRule?.valueMode === "percent" ? "%" : ""}`; }
   function signedNumber(value) { const number = Math.round(Number(value) || 0); return number > 0 ? `+${formatNumber(number)}` : formatNumber(number); }
+  function abilityText(item, level) {
+    const rule = item.effectRule || {};
+    const directionLabels = { left: "左", right: "右", up: "上", down: "下" };
+    const scope = rule.scope === "direction" ? `${(rule.directions || []).map((direction) => directionLabels[direction] || direction).join("、")}方向的` : "相邻的";
+    const categories = rule.filter?.category || [];
+    const target = categories.length === 4 ? "键盘乐器、弦乐器、管乐器、打击乐器" : categories.join("、") || "任意乐器";
+    return `使${scope}${target}增加${formatEffectValue(item, level)}表演值，最多${rule.cap ?? "不限"}件。`;
+  }
+  function highlightConcepts(text) {
+    const terms = new Set(["键盘乐器", "弦乐器", "管乐器", "打击乐器", "舞台装饰", "相邻", "左、右方向", "上、下方向", "方向", ...[...state.sets.values()].map((set) => set.name)]);
+    const pattern = new RegExp(`(${[...terms].sort((a, b) => b.length - a.length).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+    return String(text ?? "").split(pattern).map((part) => terms.has(part) ? `<mark class="concept-term">${escapeHtml(part)}</mark>` : escapeHtml(part)).join("");
+  }
+  function contributionFormula(breakdown) {
+    const parts = [`${formatNumber(breakdown.base)}（基础表演值）`];
+    for (const source of breakdown.setSources || []) parts.push(`${formatNumber(source.value)}（${escapeHtml(source.name)}）`);
+    const fixed = breakdown.base + breakdown.setFixed + breakdown.specialFixed;
+    const abilityGain = breakdown.total - fixed;
+    if (abilityGain > 0) {
+      const names = [...new Set((breakdown.abilitySources || []).map((source) => source.name))];
+      parts.push(`${formatNumber(abilityGain)}（${names.map(escapeHtml).join("、")}能力，共${formatNumber(breakdown.receivedPercent)}%）`);
+    }
+    return `${formatNumber(breakdown.total)} = ${parts.join(" + ")}`;
+  }
   function itemIcon(item, size = "warehouse") {
     const id = escapeHtml(item.id);
     const name = escapeHtml(item.name);
